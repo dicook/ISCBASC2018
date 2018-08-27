@@ -170,26 +170,167 @@ class: inverse middle center
 ### A universe of 10 dimensions
 ### Its more like...
 
+[Flatland: A Romance of Many Dimensions (1884) Edwin Abbott Abbott](https://en.wikipedia.org/wiki/Flatland) 
+
+]
+.pull-right[
+
+
+<p> <img src="img/Houghton_EC85_Ab264_884f_-_Flatland,_cover.jpg"  width="80%">
+
+The story describes a two-dimensional world occupied by geometric figures, whereof women are simple line-segments, while men are polygons with various numbers of sides.
+]
+
+---
+# How we see high-dimensions in statistics..
+
+<img src="img/cubes.png" width="100%">
+
+Increasing dimension adds an additional othogonal axis. 
+
+<p>If you want more high-dimensional shapes there is an R package, `geozoo`, which will generate cubes, spheres, simplices, torii, klein bottles, various polytopes, ... 
+
+---
+.left-column[
+# High-dimensions
+### You can't see beyond 3D
+### A universe of 10 dimensions
+### Its more like...
+### And in statistics it is everywhere
+
 ]
 .right-column[
-
-Flatland: A Romance of Many Dimensions (1884) Edwin Abbott Abbott 
-
-![](img/Houghton_EC85_Ab264_884f_-_Flatland,_cover.jpg)
-<br>
-..... and this ....
+- Principal component analysis
+- Multidimensional scaling
+- Projection pursuit
+- Regression
+- Linear discriminant analysis
+- Multivariate distributions
+- Posterior distributions
 ]
 
 ---
+class: center
 
-![](img/cubes.png)
+```{r eval=FALSE, echo=FALSE, warning=FALSE}
+library(tourr)
+library(geozoo)
+s5 <- sphere.hollow(p=5)$points[1:500,]
+colnames(s5) <- paste0("V", 1:5)
+c5 <- cube.face(p = 5)
+c5 <- c5$points[sample(1:nrow(c5$points), 500),]
+c5 <- (c5 - 0.5) * 1.4
+colnames(c5) <- paste0("V", 1:5)
+bases <- save_history(flea[, 1:5], grand_tour(2),
+                      max = 3)
+tour_path <- interpolate(bases, 0.1)
+d <- dim(tour_path)
+mydat <- NULL
+for (i in 1:d[3]) {
+  #cat(i, "\n")
+  s5p <- s5 %*% matrix(tour_path[,,i], ncol=2)
+  s5p <- cbind(s5p, rep("sphere", 500))
+  colnames(s5p) <- c("x", "y", "shape")
+  c5p <- c5 %*% matrix(tour_path[,,i], ncol=2)
+  c5p <- cbind(c5p, rep("cube", 500))
+  colnames(c5p) <- c("x", "y", "shape")
+  s5c5 <- rbind(s5p, c5p)
+  mydat <- rbind(mydat, cbind(s5c5, rep(i+10, 2*nrow(s5p))))
+}
+colnames(mydat)[4] <- "indx"
+df <- as.tibble(mydat)
+df$x <- as.numeric(df$x)
+df$y <- as.numeric(df$y)
+#save(df, file="data/s5_t.rda")
+#library(plotly)
+#load("data/s5_t.rda")
+p <- ggplot(data = df, aes(x = x, y = y) ) +
+       geom_point(aes(frame = indx), size=0.5) +
+       facet_wrap(~shape) +
+       theme_void() +
+       coord_fixed()
+pg <- ggplotly(p) %>% animation_opts(200, redraw = FALSE, 
+                                     easing = "linear")
+save_html(pg, file="s5.html")
+```
 
-increasing dimension adds an additional othogonal axis. And if you want more high-dimensional shapes there is an R package, `geozoo`, which will generate cubes, spheres, simplices, torii, klein bottles, various polytopes, ... 
+<iframe src="s5.html" width="800" height="500" scrolling="yes" seamless="seamless" frameBorder="0"> </iframe>
+
+Can you tell the difference between these 5D objects?
+--
+<p>
+.red[  Yep? You can see beyond 3D!]
 
 ---
-# 
+class: center
 
+```{r eval=FALSE, echo=FALSE}
+library(multiDA)
+library(tidyverse)
+data(SRBCT)
+vy   <- SRBCT$vy
+mX   <- SRBCT$mX
+res  <- multiDA(mX, vy, penalty="EBIC", equal.var=TRUE, set.options="exhaustive")
+x<-res
+rownames(x$res$mGamma)<-as.character(1:nrow(x$res$mGamma))
+colnames(x$mX)<-rownames(x$res$mGamma)
 
+inds<-which(apply(x$res$mGamma,1,which.max)!=1) #non null cases
+est.gamma<-apply(x$res$mGamma[inds,],1,max)
+
+df<-data.frame("est.gamma"=est.gamma, "rank"=rank(-est.gamma),"partition"=apply(x$res$mGamma,1,which.max)[inds])
+
+df <- df[order(df$rank),]
+keep <- rownames(df)[1:10]
+
+SRBCT_sub1 <- SRBCT$mX[,as.numeric(keep)]
+colnames(SRBCT_sub1) <- paste("V",keep)
+
+SRBCT_sub2 <- SRBCT$mX[,sample(1:1586, 10)]
+colnames(SRBCT_sub2) <- paste("V",keep)
+
+bases <- save_history(SRBCT_sub1, grand_tour(2),
+                      max = 3)
+tour_path <- interpolate(bases, 0.1)
+d <- dim(tour_path)
+mydat <- NULL
+for (i in 1:d[3]) {
+  #cat(i, "\n")
+  s1 <- SRBCT_sub1 %*% matrix(tour_path[,,i], ncol=2)
+  s1 <- cbind(s1, rep("A", nrow(SRBCT_sub1)), SRBCT$vy)
+  colnames(s1) <- c("x", "y", "set", "gene")
+  s2 <- SRBCT_sub2 %*% matrix(tour_path[,,i], ncol=2)
+  s2 <- cbind(s2, rep("B", nrow(SRBCT_sub2)), SRBCT$vy)
+  colnames(s2) <- c("x", "y", "set", "gene")
+  s5c5 <- rbind(s1, s2)
+  mydat <- rbind(mydat, cbind(s5c5, rep(i+10, 2*nrow(s2))))
+}
+colnames(mydat)[5] <- "indx"
+tb <- as.tibble(mydat)
+tb$x <- as.numeric(tb$x)
+tb$y <- as.numeric(tb$y)
+
+p <- ggplot(data = tb, aes(x = x, y = y, colour=gene) ) +
+       geom_point(aes(frame = indx), size=1) +
+       facet_wrap(~set) +
+       theme_void() +
+       coord_fixed() + 
+       theme(legend.position = "none")
+pg <- ggplotly(p) %>% animation_opts(200, redraw = FALSE, 
+                                     easing = "linear")
+save_html(pg, file="multiDA.html")
+
+```
+
+<iframe src="multiDA.html" width="700" height="400" scrolling="yes" seamless="seamless" frameBorder="0"> </iframe>
+
+Can you tell the difference between these 10D objects?
+--
+<p>
+Set A are genes identified by Sarah Romanes [multiDA](https://github.com/sarahromanes/multiDA) procedure; set B are a random sample of genes.
+--
+<p>
+.red[  Yep? You really can see beyond 3D!]
 
 ---
 # Outline
@@ -199,49 +340,6 @@ increasing dimension adds an additional othogonal axis. And if you want more hig
 - Model in the data-space vs data in the model-space
 - Physics data 
 
----
-## Sphere
-
-```{r eval=FALSE, echo=FALSE, warning=FALSE}
-library(tourr)
-library(geozoo)
-s5 <- sphere.hollow(p=5)
-colnames(s5$points) <- paste0("V", 1:5)
-bases <- save_history(flea[, 1:5], grand_tour(2),
-                      max = 2)
-tour_path <- interpolate(bases, 0.1)
-d <- dim(tour_path)
-mydat <- NULL
-for (i in 1:d[3]) {
-  #cat(i, "\n")
-  pd <- s5$points %*% matrix(tour_path[,,i], ncol=2)
-  mydat <- rbind(mydat, cbind(pd, rep(i, nrow(pd))))
-}
-colnames(mydat) <- c("x", "y", "indx")
-df <- as.tibble(mydat)
-#save(df, file="data/s5_t.rda")
-#library(plotly)
-#load("data/s5_t.rda")
-p <- ggplot(data = df, aes(x = x, y = y) ) +
-    geom_point(aes(frame = indx), size=0.2) +
-  theme_void() +
-  coord_fixed() +
-  theme(legend.position = "none")
-pg <- ggplotly(p) %>% animation_opts(1000, redraw = FALSE)
-m <- list(
-    l = 50,
-    r = 50,
-    b = 100,
-    t = 100,
-    pad = 4
-)
-
-h <- pg %>%
-layout(autosize = F, width = 500, height = 500, margin = m)
-save_html(h, file="s5.html")
-```
-
-<iframe src="http://dicook.org/files/ISCBASC2018/s5.html" width="80%" height="420" scrolling="no" seamless="seamless" frameBorder="0"> </iframe>
 
 ---
 ## Next slide
