@@ -222,7 +222,7 @@ c5 <- cube.face(p = 5)
 c5 <- c5$points[sample(1:nrow(c5$points), 500),]
 c5 <- (c5 - 0.5) * 1.4
 colnames(c5) <- paste0("V", 1:5)
-bases <- save_history(flea[, 1:5], grand_tour(2),
+bases <- save_history(c5, grand_tour(2),
                       max = 3)
 tour_path <- interpolate(bases, 0.1)
 d <- dim(tour_path)
@@ -243,7 +243,7 @@ df <- as.tibble(mydat)
 df$x <- as.numeric(df$x)
 df$y <- as.numeric(df$y)
 #save(df, file="data/s5_t.rda")
-#library(plotly)
+library(plotly)
 #load("data/s5_t.rda")
 p <- ggplot(data = df, aes(x = x, y = y) ) +
        geom_point(aes(frame = indx), size=0.5) +
@@ -369,12 +369,13 @@ Dendrogram: .red[data] in the .red[model space]
 ```{r echo=FALSE, fig.width=6, fig.height=6}
 source("dend_util.R")
 data(flea)
-plot(hclust(dist(rescaler(flea[,-7])), method="single"), hang=-1)
+flea_std <- rescaler(flea[,-7])
+plot(hclust(dist(flea_std), method="single"), hang=-1)
 ```
 ]
 .pull-right[
 ```{r echo=FALSE, fig.width=6, fig.height=6}
-plot(hclust(dist(rescaler(flea[,-7])), method="ward.D2"), hang=-1)
+plot(hclust(dist(flea_std), method="ward.D2"), hang=-1)
 ```
 ]
 
@@ -437,8 +438,7 @@ p <- ggplot(data = hcs, aes(x = x, y = y) ) +
        theme_void() +
        coord_fixed() +
        geom_segment(data = hcse, aes(x=x, xend=xend, y=y, yend=yend, frame = indx, colour=species)) + theme(legend.position="none")
-pg <- ggplotly(p, width=500, height=500) %>% animation_opts(200, redraw = FALSE, 
-                                     easing = "linear")
+pg <- ggplotly(p, width=500, height=500) %>% animation_opts(200, redraw = FALSE, easing = "linear")
 save_html(pg, file="single.html")
 
 p <- ggplot(data = hcw, aes(x = x, y = y) ) +
@@ -446,11 +446,8 @@ p <- ggplot(data = hcw, aes(x = x, y = y) ) +
        theme_void() +
        coord_fixed() +
        geom_segment(data = hcwe, aes(x=x, xend=xend, y=y, yend=yend, frame = indx, colour=species)) + theme(legend.position="none")
-pg <- ggplotly(p, width=500, height=500) %>% animation_opts(200, redraw = FALSE, 
-                                     easing = "linear")
+pg <- ggplotly(p, width=500, height=500) %>% animation_opts(200, redraw = FALSE, easing = "linear")
 save_html(pg, file="ward.html")
-
-
 ```
 
 .pull-left[
@@ -514,7 +511,7 @@ class: inverse
 - *Tours:* Andreas Buja, Debby Swayne, Heike Hofmann, Hadley Wickham, Ursula Laa and Nick Spyrison
 - *Library of high-d shapes:* Barret Schloerke
 - *Physics application:* Ursula Laa, German Valencia
-- Animations made with [plotly](https://plotly-book.cpsievert.me) 
+- Animations made with the R [plotly](https://plotly-book.cpsievert.me) package, by Carson Sievert
 
 Contact: [`r icon::fa_envelope()`](http://www.dicook.org) dicook@monash.edu, [`r icon::fa_twitter()`](https://twitter.com/visnut) visnut, [`r icon::fa_github()`](https://github.com/dicook) dicook
 
